@@ -26,6 +26,9 @@ try {
   console.warn('   Run: node _build_talent_map.js   to generate it.');
 }
 
+// ── Load cooldown map ───────────────────────────────────────
+const COOLDOWN_MAP = require(path.join(__dirname, 'cooldown-map.js'));
+
 // ── Load credentials ────────────────────────────────────────
 let CLIENT_ID     = process.env.WCL_CLIENT_ID     || '';
 let CLIENT_SECRET = process.env.WCL_CLIENT_SECRET || '';
@@ -146,7 +149,7 @@ async function fetchCharacter(urlStr) {
     query($code: String!, $fightIDs: [Int!], $sourceID: Int) {
       reportData { report(code: $code) {
         fights(fightIDs: $fightIDs) {
-          id  name  keystoneLevel  difficulty
+          id  name  keystoneLevel  difficulty  startTime  endTime
           gameZone { name }
         }
         masterData {
@@ -280,6 +283,61 @@ async function fetchCharacter(urlStr) {
 
   // Total damage for percentage calculations
   const totalDamage = dmgEntries.reduce((s, e) => s + e.total, 0);
+
+  // ── Cooldown tracking ─────────────────────────────────────
+  const fightDuration = ((fight?.endTime || 0) - (fight?.startTime || 0)) / 1000; // seconds
+  const specCooldowns = COOLDOWN_MAP[ev.specID] || [];
+  let cooldowns = [];
+
+  if (specCooldowns.length > 0 && fightDuration > 0) {
+    // Build filter: ability.id IN (id1, id2, ...)
+    const cdIds = specCooldowns.map(c => c.id);
+    const filterExpr = `ability.id IN (${cdIds.join(',')})`;
+
+    try {
+      const cdResult = await gql(`
+        query($code: String!, $fightIDs: [Int!], $sourceID: Int, $filter: String) {
+          reportData { report(code: $code) {
+            events(fightIDs: $fightIDs, dataType: Casts, sourceID: $sourceID,
+                   filterExpression: $filter, limit: 10000) {
+              data
+            }
+          }}
+        }`, { code, fightIDs: [fightId], sourceID: sourceId, filter: filterExpr });
+
+      const castEvents = cdResult.reportData?.report?.events?.data || [];
+      const fightStart = fight?.startTime || 0;
+
+      // Group casts by ability ID
+      const castsByAbility = {};
+      for (const ce of castEvents) {
+        const aid = ce.abilityGameID;
+        if (!castsByAbility[aid]) castsByAbility[aid] = [];
+        castsByAbility[aid].push({
+          timestamp: ((ce.timestamp || 0) - fightStart) / 1000, // seconds into fight
+        });
+      }
+
+      cooldowns = specCooldowns.map(cd => {
+        const casts = castsByAbility[cd.id] || [];
+        const maxCasts = cd.cd > 0 ? Math.floor(fightDuration / cd.cd) + 1 : null;
+        const efficiency = (maxCasts && maxCasts > 0) ? +(casts.length / maxCasts * 100).toFixed(1) : null;
+        return {
+          id:         cd.id,
+          name:       cd.name,
+          cd:         cd.cd,
+          used:       casts.length,
+          maxCasts,
+          efficiency,
+          timestamps: casts.map(c => +c.timestamp.toFixed(1)),
+        };
+      }).filter(cd => cd.used > 0 || (cd.maxCasts && cd.maxCasts > 0));
+
+    } catch (e) {
+      console.warn('Cooldown fetch failed:', e.message);
+    }
+  }
+
   return {
     log:         urlStr,
     name:        playerName || playerInfo?.name || 'Unknown',
@@ -302,12 +360,14 @@ async function fetchCharacter(urlStr) {
     leech:       ev.leech       || 0,
     damageAbilities: dmgEntries,
     totalDamage,
+    fightDuration: +fightDuration.toFixed(1),
     talents: (ev.talentTree || []).map(t => ({
       id:     t.id,
       nodeID: t.nodeID,
       rank:   t.rank || 1,
       name:   TALENT_MAP[String(t.id)] || `Unknown (${t.id})`,
     })),
+    cooldowns,
   };
 }
 

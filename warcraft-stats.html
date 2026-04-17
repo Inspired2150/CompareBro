@@ -991,6 +991,11 @@
   <div class="dmg-container" id="dmg-container"></div>
 </div>
 
+<div class="cd-section" id="cd-section" style="display:none">
+  <h3>Offensive Cooldowns</h3>
+  <div class="cd-container" id="cd-container"></div>
+</div>
+
 <div class="footer" id="footer"></div>
 
 <script>
@@ -1414,6 +1419,121 @@
     });
   }
 
+  // ── Cooldown comparison ───────────────────────────────────
+  function buildCooldownComparison(player, opponent) {
+    const container = document.getElementById('cd-container');
+    container.innerHTML = '';
+
+    const youCDs = player.cooldowns || [];
+    const oppCDs = opponent.cooldowns || [];
+    const fightDurYou = player.fightDuration || 0;
+    const fightDurOpp = opponent.fightDuration || 0;
+
+    // Merge by ability name
+    const cdMap = new Map();
+    youCDs.forEach(c => {
+      cdMap.set(c.name, { you: c, opp: null });
+    });
+    oppCDs.forEach(c => {
+      if (cdMap.has(c.name)) {
+        cdMap.get(c.name).opp = c;
+      } else {
+        cdMap.set(c.name, { you: null, opp: c });
+      }
+    });
+
+    // Sort: both used > one used > by CD length desc
+    const sorted = [...cdMap.entries()].sort((a, b) => {
+      const aHasBoth = (a[1].you && a[1].opp) ? 1 : 0;
+      const bHasBoth = (b[1].you && b[1].opp) ? 1 : 0;
+      if (aHasBoth !== bHasBoth) return bHasBoth - aHasBoth;
+      const aCD = (a[1].you || a[1].opp).cd || 0;
+      const bCD = (b[1].you || b[1].opp).cd || 0;
+      return bCD - aCD;
+    });
+
+    function effClass(eff) {
+      if (eff === null || eff === undefined) return 'na';
+      if (eff >= 90) return 'good';
+      if (eff >= 70) return 'mid';
+      return 'bad';
+    }
+
+    function formatCDTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.round(s % 60);
+      return m > 0 ? m + 'm' + (sec ? sec + 's' : '') : sec + 's';
+    }
+
+    function buildPlayerSide(cd, side, fightDur) {
+      if (!cd || cd.used === 0) {
+        return '<span class="cd-none">\u2014  not used</span>';
+      }
+      const eff = cd.efficiency;
+      const ec = effClass(eff);
+      const timelineId = 'tl-' + side + '-' + cd.id;
+
+      let html =
+        '<div class="cd-usage">' + cd.used + ' / ' + (cd.maxCasts || '?') + '</div>' +
+        '<span class="cd-efficiency ' + ec + '">' + (eff !== null ? eff + '% eff' : 'n/a') + '</span>' +
+        '<div class="cd-eff-bar"><div class="cd-eff-fill ' + ec + '" data-width="' + (eff || 0) + '"></div></div>';
+
+      // Timeline
+      if (cd.timestamps && cd.timestamps.length > 0 && fightDur > 0) {
+        html +=
+          '<div class="cd-timeline-wrap">' +
+            '<span class="cd-timeline-toggle" onclick="this.nextElementSibling.classList.toggle(\'open\')">' +
+              '\u25B6 timeline' +
+            '</span>' +
+            '<div class="cd-timeline" id="' + timelineId + '">';
+        cd.timestamps.forEach(t => {
+          const pct = (t / fightDur * 100).toFixed(1);
+          html += '<div class="cd-timeline-dot" style="left:' + pct + '%" title="' + formatCDTime(t) + '"></div>';
+        });
+        html += '</div></div>';
+      }
+
+      return html;
+    }
+
+    for (const [name, { you, opp }] of sorted) {
+      const cd = you || opp;
+      const row = document.createElement('div');
+      row.className = 'cd-row';
+
+      // Build insight
+      let insight = '';
+      if (you && opp && you.used > 0 && opp.used > 0) {
+        const diff = you.used - opp.used;
+        if (diff > 0) {
+          insight = '<strong class="you-clr">' + player.name + '</strong> used ' + name + ' <strong class="pos">+' + diff + ' more</strong> time' + (diff > 1 ? 's' : '');
+        } else if (diff < 0) {
+          insight = '<strong class="opp-clr">' + opponent.name + '</strong> used ' + name + ' <strong class="neg">+' + Math.abs(diff) + ' more</strong> time' + (Math.abs(diff) > 1 ? 's' : '');
+        }
+        // Also compare efficiency
+        if (you.efficiency !== null && opp.efficiency !== null) {
+          const effDiff = +(you.efficiency - opp.efficiency).toFixed(1);
+          if (Math.abs(effDiff) >= 5) {
+            const who = effDiff > 0 ? '<strong class="you-clr">' + player.name + '</strong>' : '<strong class="opp-clr">' + opponent.name + '</strong>';
+            insight += (insight ? '<br>' : '') + who + ' had <strong class="' + (effDiff > 0 ? 'pos' : 'neg') + '">' + Math.abs(effDiff) + '%</strong> better efficiency';
+          }
+        }
+      } else if (you && you.used > 0 && (!opp || opp.used === 0)) {
+        insight = 'Only <strong class="you-clr">' + player.name + '</strong> used ' + name;
+      } else if (opp && opp.used > 0 && (!you || you.used === 0)) {
+        insight = 'Only <strong class="opp-clr">' + opponent.name + '</strong> used ' + name;
+      }
+
+      row.innerHTML =
+        '<div class="cd-player left">' + buildPlayerSide(you, 'you', fightDurYou) + '</div>' +
+        '<div class="cd-ability-name">' + name + '<span class="cd-ability-cd">' + (cd.cd > 0 ? cd.cd + 's CD' : '') + '</span></div>' +
+        '<div class="cd-player right">' + buildPlayerSide(opp, 'opp', fightDurOpp) + '</div>' +
+        (insight ? '<div class="cd-insight">' + insight + '</div>' : '');
+
+      container.appendChild(row);
+    }
+  }
+
   // ── Animate everything ────────────────────────────────
   function runAnimations() {
     document.querySelectorAll('.ring-fg').forEach(c => {
@@ -1437,7 +1557,7 @@
     });
 
     setTimeout(() => {
-      document.querySelectorAll('.bar-fill, .dmg-pct-fill').forEach(b => {
+      document.querySelectorAll('.bar-fill, .dmg-pct-fill, .cd-eff-fill').forEach(b => {
         b.style.width = b.dataset.width + '%';
       });
     }, 400);
@@ -1493,6 +1613,12 @@
       // Damage breakdown
       document.getElementById('dmg-section').style.display = '';
       buildDamageComparison(player, opponent);
+
+      // Cooldown tracking
+      if ((player.cooldowns && player.cooldowns.length) || (opponent.cooldowns && opponent.cooldowns.length)) {
+        document.getElementById('cd-section').style.display = '';
+        buildCooldownComparison(player, opponent);
+      }
 
       // Footer
       document.getElementById('footer').innerHTML =

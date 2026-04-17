@@ -56,6 +56,7 @@ Open **http://localhost:3000** in your browser.
 | **Stat Comparison** | Side-by-side primary & secondary stats with visual ring charts |
 | **Talent Trees** | Full talent build comparison with shared/unique highlighting |
 | **Damage Breakdown** | Top 10 abilities with crit %, avg hit, and damage share |
+| **Cooldown Tracking** | Offensive CD efficiency (used vs theoretical max), expandable cast timeline |
 | **Hero Spec Detection** | Auto-detects hero talent specialization from talent data |
 | **All Classes** | Supports every class and spec in The War Within |
 
@@ -79,6 +80,7 @@ Browser  ──►  Node.js Server (port 3000)  ──►  Warcraft Logs API v2 
 CompareBro/
 ├── wcl-server.js            # Node.js server — API proxy & static host
 ├── warcraft-stats.html      # Single-page frontend (self-contained)
+├── cooldown-map.js          # specID → offensive cooldown definitions (all 38 specs)
 ├── talent-map.json          # TraitNodeEntryID → spell name lookup
 ├── _build_talent_map.js     # Script to regenerate talent-map.json
 ├── wcl-config.example.json  # Template for API credentials
