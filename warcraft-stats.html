@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warrior Comparison — Character Stats</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0e14;
+      --card:      rgba(255,255,255,.04);
+      --card-edge: rgba(255,255,255,.08);
+      --text:      #e2e8f0;
+      --dim:       #64748b;
+      --gold:      #f5c542;
+      --green:     #34d399;
+      --red:       #f87171;
+
+      --crit-clr:   #ef4444;
+      --haste-clr:  #38bdf8;
+      --mast-clr:   #a78bfa;
+      --vers-clr:   #34d399;
+
+      --ring-size: 120px;
+      --ring-width: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+      overflow-x: hidden;
+    }
+
+    /* ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 50% 45% at 25% 30%, rgba(56,189,248,.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 45% at 75% 70%, rgba(167,139,250,.06) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 35% at 50% 50%, rgba(245,197,66,.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Page title ───────────────────────────────────────── */
+    .page-title {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fadeDown .6s ease-out both;
+    }
+    .page-title h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--gold), #fde68a, #f5c542);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-title p {
+      font-size: .85rem;
+      color: var(--dim);
+      margin-top: 6px;
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Comparison layout ────────────────────────────────── */
+    .comparison {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      width: min(96vw, 1100px);
+      align-items: start;
+    }
+
+    /* ── Character card ───────────────────────────────────── */
+    .char-card {
+      padding: 32px 28px 28px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      backdrop-filter: blur(24px);
+      box-shadow: 0 24px 64px rgba(0,0,0,.4);
+      animation: cardIn .7s ease-out both;
+    }
+    .char-card:nth-child(1) { animation-delay: .1s; }
+    .char-card:nth-child(3) { animation-delay: .2s; }
+
+    .char-card.you {
+      border-color: rgba(56,189,248,.2);
+      box-shadow: 0 24px 64px rgba(0,0,0,.4), inset 0 1px 0 rgba(56,189,248,.1);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(28px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Card header ──────────────────────────────────────── */
+    .char-header { text-align: center; margin-bottom: 8px; }
+
+    .char-label {
+      display: inline-block;
+      font-size: .65rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .you .char-label {
+      background: rgba(56,189,248,.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56,189,248,.25);
+    }
+    .opponent .char-label {
+      background: rgba(245,197,66,.1);
+      color: var(--gold);
+      border: 1px solid rgba(245,197,66,.2);
+    }
+
+    .char-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+    .you .char-header h2 { color: #38bdf8; }
+    .opponent .char-header h2 { color: var(--gold); }
+
+    .char-header .subtitle {
+      font-size: .8rem;
+      color: var(--dim);
+      margin-top: 2px;
+    }
+    .char-header .subtitle strong { color: #c2885c; font-weight: 600; }
+
+    /* tag pills */
+    .tags {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin: 12px 0 22px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: .68rem;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      color: var(--dim);
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .tag.ilvl { color: var(--gold); border-color: rgba(245,197,66,.25); }
+    .tag.rating { color: #c084fc; border-color: rgba(192,132,252,.2); }
+    .tag.guild { color: #60a5fa; border-color: rgba(96,165,250,.2); }
+
+    /* ── Extra info row ───────────────────────────────────── */
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .info-item {
+      text-align: center;
+      padding: 10px 6px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.05);
+    }
+    .info-item .info-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .info-item .info-label {
+      font-size: .65rem;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-top: 2px;
+    }
+
+    /* ── Stat grid ────────────────────────────────────────── */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .stat {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 10px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.06);
+      transition: transform .25s, box-shadow .25s;
+      cursor: default;
+      animation: statIn .6s ease-out both;
+    }
+    .stat:nth-child(1) { animation-delay: .3s; }
+    .stat:nth-child(2) { animation-delay: .4s; }
+    .stat:nth-child(3) { animation-delay: .5s; }
+    .stat:nth-child(4) { animation-delay: .6s; }
+
+    @keyframes statIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 10px 28px rgba(0,0,0,.3);
+    }
+    .stat:hover .ring-fg { filter: drop-shadow(0 0 6px var(--clr)); }
+
+    /* ring */
+    .ring-wrap {
+      position: relative;
+      width: var(--ring-size);
+      height: var(--ring-size);
+    }
+    .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,.06); stroke-width: var(--ring-width); }
+    .ring-fg {
+      fill: none;
+      stroke: var(--clr);
+      stroke-width: var(--ring-width);
+      stroke-linecap: round;
+      stroke-dasharray: var(--circ);
+      stroke-dashoffset: var(--circ);
+      transition: stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1), filter .3s;
+    }
+
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .ring-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .ring-pct {
+      font-size: .65rem;
+      color: var(--dim);
+      margin-top: 2px;
+    }
+
+    /* stat name */
+    .stat-name {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--clr);
+    }
+
+    /* ── VS divider ───────────────────────────────────────── */
+    .vs-divider {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      min-height: 100%;
+      animation: vsIn .8s ease-out .3s both;
+    }
+
+    @keyframes vsIn {
+      from { opacity: 0; transform: scale(.7); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .vs-line {
+      width: 2px;
+      flex: 1;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,.12), transparent);
+      min-height: 60px;
+    }
+
+    .vs-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .95rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border: 2px solid rgba(255,255,255,.15);
+      color: var(--text);
+      margin: 14px 0;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(255,255,255,.2);
+    }
+
+    /* ── Comparison bar section ────────────────────────────── */
+    .compare-section {
+      position: relative;
+      z-index: 1;
+      width: min(96vw, 1100px);
+      margin-top: 36px;
+      animation: fadeUp .7s ease-out .5s both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .compare-section h3 {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    .compare-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 28px 32px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      backdrop-filter: blur(24px);
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 1fr 110px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-center {
+      text-align: center;
+    }
+
+    .bar-label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .bar-diff {
+      font-size: .65rem;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+    .bar-diff.pos { color: var(--green); }
+    .bar-diff.neg { color: var(--red); }
+    .bar-diff.neutral { color: var(--dim); }
+
+    .bar-side {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .bar-side.left { justify-content: flex-end; }
+    .bar-side.right { justify-content: flex-start; }
+
+    .bar-side .bar-val {
+      font-size: .85rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+    }
+    .bar-side.left .bar-val { text-align: right; color: #38bdf8; }
+    .bar-side.right .bar-val { text-align: left; color: var(--gold); }
+
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1.2s cubic-bezier(.22,1,.36,1);
+      width: 0;
+    }
+    .bar-side.left .bar-track { direction: rtl; }
+    .bar-side.left .bar-fill { background: linear-gradient(to left, #38bdf8, #0ea5e9); }
+    .bar-side.right .bar-fill { background: linear-gradient(to right, var(--gold), #fbbf24); }
+
+    /* ── Winner highlight ─────────────────────────────────── */
+    .bar-side.left .bar-val.winner { color: #22d3ee; text-shadow: 0 0 8px rgba(34,211,238,.3); }
+    .bar-side.right .bar-val.winner { color: #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,.3); }
+
+    /* ── Damage breakdown section ─────────────────────────── */
+    .dmg-section {
+      position: relative;
+      z-index: 1;
+      width: min(96vw, 1100px);
+      margin-top: 36px;
+      animation: fadeUp .7s ease-out .6s both;
+    }
+    .dmg-section h3 {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    .dmg-container {
+      padding: 28px 32px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* each ability row */
+    .dmg-ability {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.06);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .dmg-ability:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+
+    .dmg-ability-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .dmg-ability-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.12);
+      object-fit: cover;
+    }
+    .dmg-ability-name {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: .3px;
+    }
+    .dmg-rank {
+      font-size: .6rem;
+      font-weight: 700;
+      color: var(--dim);
+      background: rgba(255,255,255,.06);
+      border-radius: 999px;
+      padding: 1px 8px;
+      letter-spacing: .5px;
+    }
+
+    /* player column inside ability row */
+    .dmg-player {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dmg-player.left  { align-items: flex-end; text-align: right; }
+    .dmg-player.right { align-items: flex-start; text-align: left; }
+
+    .dmg-player-label {
+      font-size: .6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .dmg-player.left .dmg-player-label  { color: #38bdf8; }
+    .dmg-player.right .dmg-player-label { color: var(--gold); }
+
+    .dmg-total {
+      font-size: 1.15rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .dmg-player.left  .dmg-total { color: #38bdf8; }
+    .dmg-player.right .dmg-total { color: var(--gold); }
+    .dmg-total.winner { text-shadow: 0 0 10px currentColor; }
+    .dmg-total.dim { opacity: .35; }
+
+    .dmg-casts {
+      font-size: .7rem;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dmg-details {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .dmg-detail {
+      font-size: .65rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--dim);
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.05);
+    }
+    .dmg-detail strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .dmg-player.left .dmg-details { justify-content: flex-end; }
+    .dmg-player.right .dmg-details { justify-content: flex-start; }
+
+    .dmg-pct-bar {
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(255,255,255,.06);
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .dmg-pct-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1.2s cubic-bezier(.22,1,.36,1);
+      width: 0;
+    }
+    .dmg-player.left .dmg-pct-fill  { background: linear-gradient(to left, #38bdf8, #0ea5e9); float: right; }
+    .dmg-player.right .dmg-pct-fill { background: linear-gradient(to right, var(--gold), #fbbf24); }
+
+    /* insight badge */
+    .dmg-insight {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: .7rem;
+      color: var(--dim);
+      padding: 4px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.02);
+      line-height: 1.5;
+    }
+    .dmg-insight strong.you-clr  { color: #38bdf8; }
+    .dmg-insight strong.opp-clr  { color: var(--gold); }
+    .dmg-insight strong.pos      { color: var(--green); }
+    .dmg-insight strong.neg      { color: var(--red); }
+
+    /* no-data state for a side */
+    .dmg-none {
+      font-size: .75rem;
+      color: rgba(255,255,255,.15);
+      font-style: italic;
+    }
+
+    @media (max-width: 820px) {
+      .dmg-container { padding: 20px 18px; }
+    }
+
+    /* ── Talent diff section ───────────────────────────────── */
+    .talent-section {
+      position: relative;
+      z-index: 1;
+      width: min(96vw, 1100px);
+      margin-top: 36px;
+      animation: fadeUp .7s ease-out .35s both;
+    }
+    .talent-section h3 {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    .talent-container {
+      padding: 28px 32px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      backdrop-filter: blur(24px);
+    }
+
+    /* Summary bar */
+    .talent-summary {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .talent-stat-box {
+      text-align: center;
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .talent-stat-val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .talent-stat-val.shared { color: var(--green); }
+    .talent-stat-val.diff    { color: #f59e0b; }
+    .talent-stat-lbl {
+      font-size: .6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--dim);
+      margin-top: 3px;
+    }
+
+    /* Two-panel layout */
+    .talent-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .talent-panel {
+      border-radius: 14px;
+      padding: 18px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.05);
+    }
+    .talent-panel.you  { border-color: rgba(56,189,248,.12); }
+    .talent-panel.opp  { border-color: rgba(245,197,66,.1); }
+
+    .talent-panel-head {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .talent-panel.you .talent-panel-head  { color: #38bdf8; }
+    .talent-panel.opp .talent-panel-head  { color: var(--gold); }
+    .talent-panel-head .talent-count {
+      font-size: .6rem;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: var(--dim);
+    }
+
+    .talent-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .talent-chip {
+      font-size: .72rem;
+      padding: 5px 12px;
+      border-radius: 8px;
+      color: var(--text);
+      transition: transform .15s, box-shadow .15s, background .15s;
+      cursor: default;
+      line-height: 1.3;
+    }
+    .talent-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+    }
+    .talent-panel.you .talent-chip {
+      background: rgba(56,189,248,.08);
+      border: 1px solid rgba(56,189,248,.18);
+    }
+    .talent-panel.you .talent-chip:hover { background: rgba(56,189,248,.14); }
+    .talent-panel.opp .talent-chip {
+      background: rgba(245,197,66,.06);
+      border: 1px solid rgba(245,197,66,.14);
+    }
+    .talent-panel.opp .talent-chip:hover { background: rgba(245,197,66,.12); }
+
+    .talent-chip .talent-rank {
+      font-size: .58rem;
+      font-weight: 600;
+      opacity: .5;
+      margin-left: 3px;
+    }
+
+    /* rank-diff row */
+    .talent-rank-section {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255,255,255,.06);
+    }
+    .talent-rank-section-head {
+      font-size: .65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--dim);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .talent-rank-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .talent-rank-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.04);
+    }
+    .talent-rank-name {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+    }
+    .talent-rank-badge {
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .talent-rank-badge.you {
+      color: #38bdf8;
+      background: rgba(56,189,248,.1);
+      border: 1px solid rgba(56,189,248,.2);
+      text-align: right;
+    }
+    .talent-rank-badge.opp {
+      color: var(--gold);
+      background: rgba(245,197,66,.08);
+      border: 1px solid rgba(245,197,66,.15);
+      text-align: left;
+    }
+
+    .talent-identical {
+      text-align: center;
+      font-size: .85rem;
+      color: var(--green);
+      padding: 16px;
+    }
+
+    .talent-empty {
+      font-size: .75rem;
+      color: rgba(255,255,255,.2);
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    @media (max-width: 820px) {
+      .talent-panels { grid-template-columns: 1fr; }
+      .talent-container { padding: 20px 18px; }
+      .talent-rank-row { grid-template-columns: 1fr; gap: 4px; text-align: center; }
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      margin-top: 28px;
+      font-size: .7rem;
+      color: var(--dim);
+      animation: fadeUp .7s ease-out .7s both;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 820px) {
+      .comparison {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .vs-divider {
+        flex-direction: row;
+        padding: 0;
+        min-height: unset;
+      }
+      .vs-line {
+        width: auto; height: 2px; flex: 1; min-height: unset;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,.12), transparent);
+      }
+      .vs-badge { margin: 0 12px; }
+      .bar-row { grid-template-columns: 1fr; gap: 6px; }
+      .bar-side.left { justify-content: flex-start; flex-direction: row-reverse; }
+      .bar-side.left .bar-val { text-align: left; }
+      .bar-side.left .bar-track { direction: ltr; }
+      .bar-side.left .bar-fill { background: linear-gradient(to right, #0ea5e9, #38bdf8); }
+      .compare-bars { padding: 20px 18px; }
+    }
+
+    @media (max-width: 480px) {
+      :root { --ring-size: 95px; --ring-width: 6px; }
+      .ring-value { font-size: 1.05rem; }
+      .char-card { padding: 22px 16px 20px; }
+      .stats { gap: 10px; }
+      .page-title h1 { font-size: 1.4rem; }
+    }
+    /* ── Input bar ─────────────────────────────────────────── */
+    .input-bar {
+      position: relative;
+      z-index: 2;
+      width: min(96vw, 1100px);
+      margin-bottom: 32px;
+      padding: 24px 28px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      backdrop-filter: blur(24px);
+      animation: fadeDown .6s ease-out both;
+    }
+    .input-bar h3 {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--dim);
+      margin-bottom: 14px;
+    }
+    .input-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .input-row label {
+      min-width: 75px;
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .input-row label.you-lbl  { color: #38bdf8; }
+    .input-row label.opp-lbl  { color: var(--gold); }
+    .input-row input {
+      flex: 1;
+      padding: 9px 14px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      font-size: .82rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .input-row input:focus { border-color: rgba(56,189,248,.4); }
+    .input-row input::placeholder { color: rgba(255,255,255,.2); }
+    .btn-compare {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #fff;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-compare:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-compare:active { transform: scale(.97); }
+    .btn-compare:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* loading & error */
+    .status-msg {
+      text-align: center;
+      margin-top: 8px;
+      font-size: .75rem;
+      min-height: 1.2em;
+    }
+    .status-msg.loading { color: #38bdf8; }
+    .status-msg.error   { color: var(--red); }
+
+    /* spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(56,189,248,.3);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Page Title -->
+<div class="page-title">
+  <h1 id="page-heading">Warcraft Logs Showdown</h1>
+  <p>Paste two WCL report URLs and compare</p>
+</div>
+
+<!-- URL Input Bar -->
+<div class="input-bar">
+  <h3>Warcraft Logs URLs</h3>
+  <div class="input-row">
+    <label class="you-lbl">Player</label>
+    <input type="text" id="url-you" placeholder="https://www.warcraftlogs.com/reports/...?fight=X&source=Y" />
+  </div>
+  <div class="input-row">
+    <label class="opp-lbl">Opponent</label>
+    <input type="text" id="url-opp" placeholder="https://www.warcraftlogs.com/reports/...?fight=X&source=Y" />
+  </div>
+  <div class="input-row" style="justify-content:center; margin-top:4px;">
+    <button class="btn-compare" id="btn-compare">Compare</button>
+  </div>
+  <div class="status-msg" id="status"></div>
+</div>
+
+<!-- Dynamic content injected by JS -->
+<div class="talent-section" id="talent-section" style="display:none">
+  <h3>Talent Differences</h3>
+  <div class="talent-container" id="talent-container"></div>
+</div>
+
+<div class="comparison" id="comparison" style="display:none"></div>
+
+<div class="compare-section" id="compare-section" style="display:none">
+  <h3>Head to Head</h3>
+  <div class="compare-bars" id="compare-bars"></div>
+</div>
+
+<div class="dmg-section" id="dmg-section" style="display:none">
+  <h3>Damage Breakdown — Top 5</h3>
+  <div class="dmg-container" id="dmg-container"></div>
+</div>
+
+<div class="footer" id="footer"></div>
+
+<script>
+  // ── Midnight stat conversion: rating per 1% ──────────
+  const RATING_PER_PCT = {
+    crit:        638 / 22,    // ≈ 29.0
+    haste:       903 / 25,    // ≈ 36.12
+    mastery:     453 / 27,    // ≈ 16.78
+    versatility: 170 / 3,     // ≈ 56.67
+  };
+
+  // DR kicks in at 30% — this is our ring "soft cap"
+  const DR_THRESHOLD = 30;
+
+  const API_BASE = '/api/wcl';
+
+  // ── Persist URLs in localStorage ──────────────────────
+  const urlYouEl = document.getElementById('url-you');
+  const urlOppEl = document.getElementById('url-opp');
+  urlYouEl.value = localStorage.getItem('wcl_url_you') || '';
+  urlOppEl.value = localStorage.getItem('wcl_url_opp') || '';
+
+  // ── Fetch character data from the local server ────────
+  async function fetchChar(wclUrl) {
+    const res = await fetch(`${API_BASE}?url=${encodeURIComponent(wclUrl)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    return data;
+  }
+
+  // ── Talent diff ───────────────────────────────────────
+  function cleanName(n) { return n.replace(/^"|"$/g, ''); }
+
+  function buildTalentDiff(player, opponent) {
+    const youTalents = player.talents || [];
+    const oppTalents = opponent.talents || [];
+
+    const youSet = new Map(youTalents.map(t => [t.id, t]));
+    const oppSet = new Map(oppTalents.map(t => [t.id, t]));
+
+    const onlyYou = [], onlyOpp = [], rankDiff = [];
+    for (const [id, t] of youSet) {
+      if (!oppSet.has(id)) onlyYou.push(t);
+      else if (oppSet.get(id).rank !== t.rank) rankDiff.push({ you: t, opp: oppSet.get(id) });
+    }
+    for (const [id, t] of oppSet) {
+      if (!youSet.has(id)) onlyOpp.push(t);
+    }
+
+    const container = document.getElementById('talent-container');
+    container.innerHTML = '';
+
+    const shared = youTalents.length - onlyYou.length - rankDiff.length;
+    const totalUnique = onlyYou.length + onlyOpp.length + rankDiff.length;
+
+    // ── Summary boxes ──
+    const summary = document.createElement('div');
+    summary.className = 'talent-summary';
+    summary.innerHTML =
+      '<div class="talent-stat-box">' +
+        '<div class="talent-stat-val shared">' + shared + '</div>' +
+        '<div class="talent-stat-lbl">Shared</div>' +
+      '</div>' +
+      '<div class="talent-stat-box">' +
+        '<div class="talent-stat-val diff">' + totalUnique + '</div>' +
+        '<div class="talent-stat-lbl">Differences</div>' +
+      '</div>' +
+      '<div class="talent-stat-box">' +
+        '<div class="talent-stat-val" style="color:#38bdf8">' + onlyYou.length + '</div>' +
+        '<div class="talent-stat-lbl">Only ' + player.name + '</div>' +
+      '</div>' +
+      '<div class="talent-stat-box">' +
+        '<div class="talent-stat-val" style="color:var(--gold)">' + onlyOpp.length + '</div>' +
+        '<div class="talent-stat-lbl">Only ' + opponent.name + '</div>' +
+      '</div>';
+    container.appendChild(summary);
+
+    if (totalUnique === 0) {
+      const ident = document.createElement('div');
+      ident.className = 'talent-identical';
+      ident.textContent = '\u2714  Identical talent builds!';
+      container.appendChild(ident);
+      return;
+    }
+
+    // ── Two side-by-side panels ──
+    const panels = document.createElement('div');
+    panels.className = 'talent-panels';
+
+    // Helper: build one panel
+    function buildPanel(side, label, talents, cls) {
+      const panel = document.createElement('div');
+      panel.className = 'talent-panel ' + cls;
+
+      const head = document.createElement('div');
+      head.className = 'talent-panel-head';
+      head.innerHTML = label + ' <span class="talent-count">' + talents.length + '</span>';
+      panel.appendChild(head);
+
+      const grid = document.createElement('div');
+      grid.className = 'talent-grid';
+
+      if (talents.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'talent-empty';
+        empty.textContent = 'No unique talents';
+        grid.appendChild(empty);
+      } else {
+        talents.sort((a, b) => cleanName(a.name).localeCompare(cleanName(b.name)));
+        for (const t of talents) {
+          const chip = document.createElement('span');
+          chip.className = 'talent-chip';
+          chip.innerHTML = cleanName(t.name) +
+            (t.rank > 1 ? '<span class="talent-rank"> x' + t.rank + '</span>' : '');
+          chip.title = cleanName(t.name);
+          grid.appendChild(chip);
+        }
+      }
+
+      panel.appendChild(grid);
+      return panel;
+    }
+
+    panels.appendChild(buildPanel('left', player.name + ' only', onlyYou, 'you'));
+    panels.appendChild(buildPanel('right', opponent.name + ' only', onlyOpp, 'opp'));
+    container.appendChild(panels);
+
+    // ── Rank differences ──
+    if (rankDiff.length) {
+      const section = document.createElement('div');
+      section.className = 'talent-rank-section';
+
+      const sHead = document.createElement('div');
+      sHead.className = 'talent-rank-section-head';
+      sHead.textContent = 'Different Ranks (' + rankDiff.length + ')';
+      section.appendChild(sHead);
+
+      const rows = document.createElement('div');
+      rows.className = 'talent-rank-rows';
+
+      rankDiff.sort((a, b) => cleanName(a.you.name).localeCompare(cleanName(b.you.name)));
+      for (const d of rankDiff) {
+        const row = document.createElement('div');
+        row.className = 'talent-rank-row';
+        row.innerHTML =
+          '<span class="talent-rank-badge you">Rank ' + d.you.rank + '</span>' +
+          '<span class="talent-rank-name">' + cleanName(d.you.name) + '</span>' +
+          '<span class="talent-rank-badge opp">Rank ' + d.opp.rank + '</span>';
+        rows.appendChild(row);
+      }
+
+      section.appendChild(rows);
+      container.appendChild(section);
+    }
+  }
+
+  // ── Build character card HTML ─────────────────────────
+  function buildCard(data, role, containerId) {
+    const isPlayer = role === 'you';
+    const sideCls  = isPlayer ? 'you' : 'opponent';
+    const label    = isPlayer ? 'You' : 'Opponent';
+
+    const subtitle = [data.spec, data.heroSpec].filter(Boolean).join(' · ');
+
+    const tags = [];
+    if (data.ilvl)     tags.push(`<span class="tag ilvl">iLvl ${data.ilvl}</span>`);
+    if (data.dungeon)  tags.push(`<span class="tag">${data.dungeon}</span>`);
+    if (data.keyLevel) tags.push(`<span class="tag rating">M+${data.keyLevel}</span>`);
+    if (data.guild)    tags.push(`<span class="tag guild">&#10094;${data.guild}&#10095;</span>`);
+    if (data.server)   tags.push(`<span class="tag">${data.server}</span>`);
+
+    const card = document.createElement('div');
+    card.className = `char-card ${sideCls}`;
+    card.innerHTML = `
+      <div class="char-header">
+        <span class="char-label">${label}</span>
+        <h2>${data.name}</h2>
+        <p class="subtitle"><strong>${data.class}</strong> &mdash; ${subtitle || data.spec}</p>
+      </div>
+      <div class="tags">${tags.join('\n        ')}</div>
+      <div class="info-row">
+        <div class="info-item">
+          <div class="info-val">${(data.mainStat?.value || 0).toLocaleString()}</div>
+          <div class="info-label">${data.mainStat?.name || 'Primary'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-val">${(data.stamina || 0).toLocaleString()}</div>
+          <div class="info-label">Stamina</div>
+        </div>
+      </div>
+      <div class="stats" id="${containerId}"></div>`;
+    return card;
+  }
+
+  // ── Stat rings ────────────────────────────────────────
+  // Convert flat rating → percentage using Midnight conversion rates
+  function ratingToPct(rating, statKey) {
+    const rpp = RATING_PER_PCT[statKey];
+    if (!rpp) return 0;
+    return rating / rpp;
+  }
+
+  function getStatArray(data) {
+    return [
+      { name: 'Haste',       rating: data.haste       || 0, key: 'haste',       color: 'var(--haste-clr)' },
+      { name: 'Critical',    rating: data.crit        || 0, key: 'crit',        color: 'var(--crit-clr)' },
+      { name: 'Mastery',     rating: data.mastery     || 0, key: 'mastery',     color: 'var(--mast-clr)' },
+      { name: 'Versatility', rating: data.versatility || 0, key: 'versatility', color: 'var(--vers-clr)' },
+    ];
+  }
+
+  function buildRings(stats, containerId) {
+    const container = document.getElementById(containerId);
+    stats.forEach(s => {
+      const pct = ratingToPct(s.rating, s.key);          // actual %
+      const ringFill = Math.min(pct / DR_THRESHOLD, 1);  // fill relative to 30% DR
+      const r = 50;
+      const circ = 2 * Math.PI * r;
+      const offset = circ * (1 - ringFill);
+
+      const overDR = pct >= DR_THRESHOLD;
+      const subText = overDR
+        ? `${s.rating.toLocaleString()} rating · DR`
+        : `${s.rating.toLocaleString()} rating`;
+
+      const el = document.createElement('div');
+      el.className = 'stat';
+      el.style.setProperty('--clr', s.color);
+      el.innerHTML = `
+        <div class="ring-wrap">
+          <svg viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="${r}"/>
+            <circle class="ring-fg" cx="60" cy="60" r="${r}"
+                    style="--circ:${circ}" data-target="${offset}"/>
+          </svg>
+          <div class="ring-label">
+            <span class="ring-value" data-target="${pct.toFixed(1)}" data-suffix="%" data-decimals="1">0%</span>
+            <span class="ring-pct">${subText}</span>
+          </div>
+        </div>
+        <span class="stat-name">${s.name}</span>`;
+      container.appendChild(el);
+    });
+  }
+
+  // ── Comparison bars ───────────────────────────────────
+  function buildCompare(player, opponent) {
+    const rows = [
+      { label: 'Haste',       you: player.haste||0,       opp: opponent.haste||0,       clr: 'var(--haste-clr)' },
+      { label: 'Critical',    you: player.crit||0,        opp: opponent.crit||0,        clr: 'var(--crit-clr)' },
+      { label: 'Mastery',     you: player.mastery||0,     opp: opponent.mastery||0,     clr: 'var(--mast-clr)' },
+      { label: 'Versatility', you: player.versatility||0, opp: opponent.versatility||0, clr: 'var(--vers-clr)' },
+      { label: 'Item Level',  you: player.ilvl||0,        opp: opponent.ilvl||0,        clr: 'var(--gold)' },
+      { label: player.mainStat?.name || 'Primary', you: player.mainStat?.value||0, opp: opponent.mainStat?.value||0, clr: '#fb923c' },
+      { label: 'Stamina',     you: player.stamina||0,     opp: opponent.stamina||0,     clr: '#f472b6' },
+    ];
+
+    const barsEl = document.getElementById('compare-bars');
+    barsEl.innerHTML = '';
+    rows.forEach(c => {
+      const maxVal = Math.max(c.you, c.opp) || 1;
+      const youPct = (c.you / maxVal * 100).toFixed(1);
+      const oppPct = (c.opp / maxVal * 100).toFixed(1);
+      const diff = c.you - c.opp;
+      const diffAbs = Math.abs(diff);
+      const diffStr = diff > 0 ? `+${diffAbs.toLocaleString()}` : `-${diffAbs.toLocaleString()}`;
+      const diffCls = diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'neutral';
+      const youWin = c.you > c.opp;
+      const oppWin = c.opp > c.you;
+
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-side left">
+          <span class="bar-val ${youWin ? 'winner' : ''}">${c.you.toLocaleString()}</span>
+          <div class="bar-track"><div class="bar-fill" data-width="${youPct}"></div></div>
+        </div>
+        <div class="bar-center">
+          <div class="bar-label" style="color:${c.clr}">${c.label}</div>
+          <div class="bar-diff ${diffCls}">${diff === 0 ? 'TIED' : diffStr}</div>
+        </div>
+        <div class="bar-side right">
+          <div class="bar-track"><div class="bar-fill" data-width="${oppPct}"></div></div>
+          <span class="bar-val ${oppWin ? 'winner' : ''}">${c.opp.toLocaleString()}</span>
+        </div>`;
+      barsEl.appendChild(row);
+    });
+  }
+
+  // ── Damage breakdown comparison ────────────────────────
+  function buildDamageComparison(player, opponent) {
+    const youAbilities = player.damageAbilities || [];
+    const oppAbilities = opponent.damageAbilities || [];
+
+    // Merge abilities by name from both sides
+    const abilityMap = new Map();
+    youAbilities.forEach((a, i) => {
+      abilityMap.set(a.name, { you: a, youRank: i + 1, opp: null, oppRank: null, icon: a.icon });
+    });
+    oppAbilities.forEach((a, i) => {
+      if (abilityMap.has(a.name)) {
+        const entry = abilityMap.get(a.name);
+        entry.opp = a;
+        entry.oppRank = i + 1;
+        if (!entry.icon && a.icon) entry.icon = a.icon;
+      } else {
+        abilityMap.set(a.name, { you: null, youRank: null, opp: a, oppRank: i + 1, icon: a.icon });
+      }
+    });
+
+    // Pick top 5: prefer shared abilities, then sort by combined damage
+    const allAbilities = [...abilityMap.entries()]
+      .map(([name, d]) => ({
+        name, ...d,
+        combined: (d.you?.total || 0) + (d.opp?.total || 0),
+        shared: !!(d.you && d.opp),
+      }))
+      .sort((a, b) => {
+        if (a.shared !== b.shared) return b.shared - a.shared;
+        return b.combined - a.combined;
+      })
+      .slice(0, 5);
+
+    const container = document.getElementById('dmg-container');
+    container.innerHTML = '';
+
+    const youTotal = player.totalDamage || 1;
+    const oppTotal = opponent.totalDamage || 1;
+
+    allAbilities.forEach((ab, idx) => {
+      const youDmg     = ab.you?.total   || 0;
+      const oppDmg     = ab.opp?.total   || 0;
+      const youUses    = ab.you?.uses    || 0;
+      const oppUses    = ab.opp?.uses    || 0;
+      const youHits    = ab.you?.hits    || 0;
+      const oppHits    = ab.opp?.hits    || 0;
+      const youCritPct = ab.you?.critPct || 0;
+      const oppCritPct = ab.opp?.critPct || 0;
+      const youAvgHit  = ab.you?.avgHit  || 0;
+      const oppAvgHit  = ab.opp?.avgHit  || 0;
+      const youMaxHit  = ab.you?.maxHit  || 0;
+      const oppMaxHit  = ab.opp?.maxHit  || 0;
+      const maxDmg     = Math.max(youDmg, oppDmg) || 1;
+
+      const youShare = (youDmg / youTotal * 100);
+      const oppShare = (oppDmg / oppTotal * 100);
+
+      // Generate insights
+      const insights = [];
+      if (ab.you && ab.opp) {
+        if (youDmg !== oppDmg) {
+          const winner = youDmg > oppDmg ? player.name : opponent.name;
+          const winCls = youDmg > oppDmg ? 'you-clr' : 'opp-clr';
+          const hi = Math.max(youDmg, oppDmg);
+          const lo = Math.min(youDmg, oppDmg);
+          const pct = lo > 0 ? Math.round((hi - lo) / lo * 100) : 999;
+          insights.push(`<strong class="${winCls}">${winner}</strong> dealt <strong class="pos">${pct}%</strong> more damage with ${ab.name}`);
+        }
+        if (youUses && oppUses && youUses !== oppUses) {
+          const winner = youUses > oppUses ? player.name : opponent.name;
+          const winCls = youUses > oppUses ? 'you-clr' : 'opp-clr';
+          const hi = Math.max(youUses, oppUses);
+          const lo = Math.min(youUses, oppUses);
+          const castPct = Math.round((hi - lo) / lo * 100);
+          insights.push(`<strong class="${winCls}">${winner}</strong> pressed it <strong class="pos">${castPct}%</strong> more times (${hi} vs ${lo})`);
+        }
+      } else {
+        const who = ab.you ? player.name : opponent.name;
+        const cls = ab.you ? 'you-clr' : 'opp-clr';
+        insights.push(`Only <strong class="${cls}">${who}</strong> used this ability`);
+      }
+
+      const iconUrl = ab.icon
+        ? 'https://assets.rpglogs.com/img/warcraft/abilities/' + ab.icon
+        : '';
+
+      const row = document.createElement('div');
+      row.className = 'dmg-ability';
+      row.innerHTML =
+        '<div class="dmg-ability-header">' +
+          '<span class="dmg-rank">#' + (idx + 1) + '</span>' +
+          (iconUrl ? '<img class="dmg-ability-icon" src="' + iconUrl + '" alt="" onerror="this.style.display=\'none\'"/>' : '') +
+          '<span class="dmg-ability-name">' + ab.name + '</span>' +
+        '</div>' +
+
+        '<div class="dmg-player left">' +
+          '<span class="dmg-player-label">' + player.name + '</span>' +
+          (ab.you
+            ? '<span class="dmg-total ' + (youDmg >= oppDmg ? 'winner' : '') + '">' + youDmg.toLocaleString() + '</span>' +
+              '<span class="dmg-casts">' + youUses + ' casts · ' + youHits + ' hits · ' + youShare.toFixed(1) + '% of total</span>' +
+              '<div class="dmg-details">' +
+                '<span class="dmg-detail">Crit <strong>' + youCritPct + '%</strong></span>' +
+                '<span class="dmg-detail">Avg <strong>' + youAvgHit.toLocaleString() + '</strong></span>' +
+                '<span class="dmg-detail">Max <strong>' + youMaxHit.toLocaleString() + '</strong></span>' +
+              '</div>' +
+              '<div class="dmg-pct-bar"><div class="dmg-pct-fill" data-width="' + (youDmg / maxDmg * 100).toFixed(1) + '"></div></div>'
+            : '<span class="dmg-none">\u2014  not used</span>'
+          ) +
+        '</div>' +
+
+        '<div class="dmg-player right">' +
+          '<span class="dmg-player-label">' + opponent.name + '</span>' +
+          (ab.opp
+            ? '<span class="dmg-total ' + (oppDmg > youDmg ? 'winner' : '') + '">' + oppDmg.toLocaleString() + '</span>' +
+              '<span class="dmg-casts">' + oppUses + ' casts · ' + oppHits + ' hits · ' + oppShare.toFixed(1) + '% of total</span>' +
+              '<div class="dmg-details">' +
+                '<span class="dmg-detail">Crit <strong>' + oppCritPct + '%</strong></span>' +
+                '<span class="dmg-detail">Avg <strong>' + oppAvgHit.toLocaleString() + '</strong></span>' +
+                '<span class="dmg-detail">Max <strong>' + oppMaxHit.toLocaleString() + '</strong></span>' +
+              '</div>' +
+              '<div class="dmg-pct-bar"><div class="dmg-pct-fill" data-width="' + (oppDmg / maxDmg * 100).toFixed(1) + '"></div></div>'
+            : '<span class="dmg-none">\u2014  not used</span>'
+          ) +
+        '</div>' +
+
+        (insights.length
+          ? '<div class="dmg-insight">' + insights.join('<br>') + '</div>'
+          : '');
+
+      container.appendChild(row);
+    });
+  }
+
+  // ── Animate everything ────────────────────────────────
+  function runAnimations() {
+    document.querySelectorAll('.ring-fg').forEach(c => {
+      requestAnimationFrame(() => { c.style.strokeDashoffset = c.dataset.target; });
+    });
+
+    document.querySelectorAll('.ring-value').forEach(el => {
+      const target = +el.dataset.target;
+      const suffix = el.dataset.suffix || '';
+      const decimals = +(el.dataset.decimals || 0);
+      const duration = 1200;
+      const start = performance.now();
+      const step = now => {
+        const t = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const val = target * ease;
+        el.textContent = (decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString()) + suffix;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+
+    setTimeout(() => {
+      document.querySelectorAll('.bar-fill, .dmg-pct-fill').forEach(b => {
+        b.style.width = b.dataset.width + '%';
+      });
+    }, 400);
+  }
+
+  // ── Main: compare two logs ────────────────────────────
+  async function runComparison() {
+    const youUrl = urlYouEl.value.trim();
+    const oppUrl = urlOppEl.value.trim();
+    if (!youUrl || !oppUrl) { setStatus('Enter both URLs', 'error'); return; }
+
+    localStorage.setItem('wcl_url_you', youUrl);
+    localStorage.setItem('wcl_url_opp', oppUrl);
+
+    const btn = document.getElementById('btn-compare');
+    btn.disabled = true;
+    setStatus('<span class="spinner"></span> Fetching from Warcraft Logs…', 'loading');
+
+    try {
+      const [player, opponent] = await Promise.all([
+        fetchChar(youUrl),
+        fetchChar(oppUrl),
+      ]);
+
+      // Update page heading
+      const h = document.getElementById('page-heading');
+      h.textContent = `${player.class || ''} ${player.spec || ''} Showdown`.trim() || 'Stat Showdown';
+
+      // Talent diff (at the top, before cards)
+      document.getElementById('talent-section').style.display = '';
+      buildTalentDiff(player, opponent);
+
+      // Build UI
+      const comp = document.getElementById('comparison');
+      comp.innerHTML = '';
+      comp.style.display = '';
+
+      comp.appendChild(buildCard(player, 'you', 'stats-you'));
+
+      const vs = document.createElement('div');
+      vs.className = 'vs-divider';
+      vs.innerHTML = '<div class="vs-line"></div><div class="vs-badge">VS</div><div class="vs-line"></div>';
+      comp.appendChild(vs);
+
+      comp.appendChild(buildCard(opponent, 'opponent', 'stats-opp'));
+
+      buildRings(getStatArray(player),   'stats-you');
+      buildRings(getStatArray(opponent), 'stats-opp');
+
+      document.getElementById('compare-section').style.display = '';
+      buildCompare(player, opponent);
+
+      // Damage breakdown
+      document.getElementById('dmg-section').style.display = '';
+      buildDamageComparison(player, opponent);
+
+      // Footer
+      document.getElementById('footer').innerHTML =
+        `Data from Warcraft Logs &mdash; <a href="${player.log}" target="_blank">${player.name}</a> &amp; <a href="${opponent.log}" target="_blank">${opponent.name}</a>`;
+
+      setStatus('');
+      requestAnimationFrame(runAnimations);
+
+    } catch (e) {
+      setStatus(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function setStatus(msg, cls) {
+    const el = document.getElementById('status');
+    el.innerHTML = msg;
+    el.className = 'status-msg' + (cls ? ' ' + cls : '');
+  }
+
+  // ── Wire up button & Enter key ────────────────────────
+  document.getElementById('btn-compare').addEventListener('click', runComparison);
+  document.querySelectorAll('.input-row input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') runComparison(); });
+  });
+
+  // Auto-run if both URLs are saved
+  if (urlYouEl.value && urlOppEl.value) runComparison();
+</script>
+
+</body>
+</html>

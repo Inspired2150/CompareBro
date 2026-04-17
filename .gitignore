@@ -1,0 +1,9 @@
+# Credentials - never commit
+wcl-config.json
+
+# Node
+node_modules/
+
+# OS
+Thumbs.db
+.DS_Store

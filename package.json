@@ -1,0 +1,10 @@
+{
+  "name": "compare-bro",
+  "version": "1.0.0",
+  "description": "WCL Warrior Comparison Tool",
+  "main": "wcl-server.js",
+  "scripts": {
+    "start": "node wcl-server.js",
+    "build-talents": "node _build_talent_map.js"
+  }
+}
