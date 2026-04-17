@@ -63,13 +63,12 @@ module.exports = {
     { id: 47568,  name: 'Empower Rune Weapon',   cd: 120 },
     { id: 152279, name: 'Breath of Sindragosa',   cd: 120 },
     { id: 383269, name: 'Abomination Limb',       cd: 120 },
-    { id: 279302, name: 'Frostwyrm\'s Fury',      cd: 180 },
+    { id: 279302, name: 'Frostwyrm\'s Fury',      cd: 90  },
   ],
 
   // Unholy
   252: [
-    { id: 42650,  name: 'Army of the Dead',    cd: 480 },
-    { id: 49206,  name: 'Summon Gargoyle',      cd: 180 },
+    { id: 42650,  name: 'Army of the Dead',    cd: 90  },
     { id: 63560,  name: 'Dark Transformation',  cd: 45  },
     { id: 207289, name: 'Unholy Assault',        cd: 90  },
     { id: 275699, name: 'Apocalypse',            cd: 45  },
@@ -122,7 +121,7 @@ module.exports = {
     { id: 288613, name: 'Trueshot',          cd: 120 },
     { id: 260243, name: 'Volley',             cd: 45  },
     { id: 400456, name: 'Salvo',              cd: 45  },
-    { id: 53209,  name: 'Lone Wolf',          cd: 0   },
+
   ],
 
   // Survival
@@ -130,7 +129,7 @@ module.exports = {
     { id: 360952, name: 'Coordinated Assault', cd: 120 },
     { id: 360966, name: 'Spearhead',            cd: 90  },
     { id: 203415, name: 'Fury of the Eagle',    cd: 45  },
-    { id: 259489, name: 'Kill Command',          cd: 0   },
+
   ],
 
   /* ────────────────────────── ROGUE ──────────────────────────── */
@@ -140,7 +139,7 @@ module.exports = {
     { id: 360194, name: 'Deathmark',              cd: 120 },
     { id: 385627, name: 'Kingsbane',               cd: 60  },
     { id: 381802, name: 'Indiscriminate Carnage',  cd: 45  },
-    { id: 360194, name: 'Shiv (empowered)',         cd: 25  },
+    { id: 5938,   name: 'Shiv',                     cd: 25  },
   ],
 
   // Outlaw
@@ -154,7 +153,7 @@ module.exports = {
 
   // Subtlety
   261: [
-    { id: 121471, name: 'Shadow Blades',     cd: 180 },
+    { id: 121471, name: 'Shadow Blades',     cd: 90  },
     { id: 185313, name: 'Shadow Dance',       cd: 60  },
     { id: 280719, name: 'Secret Technique',   cd: 45  },
     { id: 384631, name: 'Flagellation',        cd: 90  },
@@ -253,14 +252,14 @@ module.exports = {
 
   // Demonology
   266: [
-    { id: 265187, name: 'Summon Demonic Tyrant', cd: 90  },
+    { id: 265187, name: 'Summon Demonic Tyrant', cd: 60  },
     { id: 267217, name: 'Nether Portal',          cd: 180 },
     { id: 111898, name: 'Grimoire: Felguard',     cd: 120 },
   ],
 
   // Destruction
   267: [
-    { id: 1122,   name: 'Summon Infernal',       cd: 180 },
+    { id: 1122,   name: 'Summon Infernal',       cd: 120 },
     { id: 196447, name: 'Channel Demonfire',      cd: 25  },
     { id: 152108, name: 'Cataclysm',              cd: 30  },
   ],
@@ -310,7 +309,6 @@ module.exports = {
     { id: 102543, name: 'Incarnation: Avatar of Ashamane',   cd: 180 },
     { id: 391528, name: 'Convoke the Spirits',                cd: 60  },
     { id: 274837, name: 'Feral Frenzy',                        cd: 45  },
-    { id: 106839, name: 'Skull Bash',                          cd: 15  },
   ],
 
   // Guardian
@@ -333,7 +331,7 @@ module.exports = {
 
   // Havoc
   577: [
-    { id: 191427, name: 'Metamorphosis',     cd: 240 },
+    { id: 191427, name: 'Metamorphosis',     cd: 120 },
     { id: 370965, name: 'The Hunt',           cd: 90  },
     { id: 258860, name: 'Essence Break',       cd: 40  },
     { id: 390163, name: 'Elysian Decree',      cd: 60  },
